@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #09090f;
+  --bg2: #0f0f18;
+  --card: #13131e;
+  --card2: #1a1a28;
+  --border: #1e1e2e;
+  --border2: #2a2a3d;
+  --fg: #f0ede8;
+  --fg2: #a0a0b8;
+  --muted: #52526a;
+  --accent: #3ecfcf;
+  --accent-dim: #1a4a4a;
+  --accent-text: #7edede;
+  --success: #4ade80;
+  --success-dim: #1a3a28;
+  --warning: #facc15;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+  min-height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+input, textarea, button { font-family: inherit; }
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.12); opacity: 0.08; }
+  100% { transform: scale(1); opacity: 0.3; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-fast {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in { animation: fade-in 0.35s ease forwards; }
+.animate-fade-fast { animation: fade-in-fast 0.2s ease forwards; }
+
+@keyframes breathe {
+  0%, 100% { transform: translate(-50%, -50%) scale(0.92); opacity: 0.035; }
+  50% { transform: translate(-50%, -50%) scale(1.14); opacity: 0.07; }
+}
