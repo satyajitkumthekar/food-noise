@@ -73,6 +73,7 @@ export default function OnboardingChat({ name, userId }: Props) {
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let lineBuffer = ''
+      let finishedWithDone = false
 
       while (true) {
         const { done, value } = await reader.read()
@@ -90,16 +91,30 @@ export default function OnboardingChat({ name, userId }: Props) {
             if (parsed.type === 'question') {
               setCurrentQuestion(parsed.text)
               setQuestionCount(c => c + 1)
-            } else if (parsed.type === 'done') {
-              await saveAndFinish(parsed.profile)
             } else if (parsed.type === 'error') {
               setError(parsed.message)
+            } else if (parsed.type === 'done' && parsed.profile) {
+              finishedWithDone = true
+              await saveAndFinish(parsed.profile)
             }
           } catch { /* incomplete line */ }
         }
       }
 
-      claudeMessagesRef.current = [...claudeMessagesRef.current, { role: 'assistant', content: rawAssistantRef.current.trim() }]
+      // Check remaining buffer for done line (in case it wasn't newline-terminated)
+      if (!finishedWithDone && lineBuffer.trim()) {
+        try {
+          const parsed = JSON.parse(lineBuffer.trim())
+          if (parsed.type === 'done' && parsed.profile) {
+            finishedWithDone = true
+            await saveAndFinish(parsed.profile)
+          }
+        } catch { /* not valid JSON */ }
+      }
+
+      if (!finishedWithDone) {
+        claudeMessagesRef.current = [...claudeMessagesRef.current, { role: 'assistant', content: rawAssistantRef.current.trim() }]
+      }
     } catch (e) {
       console.error('onboarding-chat error', e)
       setError('Something went wrong. Tap to try again.')
@@ -110,11 +125,17 @@ export default function OnboardingChat({ name, userId }: Props) {
 
   async function saveAndFinish(personalityMd: string) {
     setSaving(true)
-    await supabase.from('profiles').upsert({
+    const { error } = await supabase.from('profiles').upsert({
       id: userId,
       name,
       personality_md: personalityMd,
     })
+    if (error) {
+      console.error('profile save error', error)
+      setError('Could not save your profile. Please try again.')
+      setSaving(false)
+      return
+    }
     router.push('/')
   }
 
