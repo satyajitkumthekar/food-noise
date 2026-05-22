@@ -1,9 +1,18 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 export default function UrgeHome({ held, total }: { held: number; total: number }) {
   const router = useRouter()
+  const supabase = createClient()
+
+  async function handleResetProfile() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase.from('profiles').update({ personality_md: null, goal: null, why_it_matters: null, what_changes: null, name: null }).eq('id', user.id)
+    router.push('/onboarding')
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-72px)] px-6 text-center" style={{ background: 'var(--bg)' }}>
@@ -48,6 +57,17 @@ export default function UrgeHome({ held, total }: { held: number; total: number 
           Tap when the feeling hits. This is where it starts.
         </p>
       )}
+
+      <button
+        onClick={handleResetProfile}
+        style={{
+          position: 'absolute', bottom: 90, fontSize: 12,
+          color: 'var(--muted)', background: 'none', border: 'none',
+          cursor: 'pointer', letterSpacing: '0.04em',
+        }}
+      >
+        Reset profile
+      </button>
     </div>
   )
 }
