@@ -9,15 +9,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: profileData } = await supabase
     .from('profiles')
-    .select('goal')
-    .eq('id', user!.id)
+    .select('personality_md')
+    .eq('id', user.id)
     .single()
 
-  const profile = profileData as { goal: string | null } | null
-
-  if (!profile?.goal) {
-    redirect('/onboarding')
-  }
+  const profile = profileData as { personality_md: string | null } | null
+  if (!profile?.personality_md) redirect('/onboarding')
 
   return (
     <div className="flex flex-col min-h-dvh" style={{ background: 'var(--background)' }}>
