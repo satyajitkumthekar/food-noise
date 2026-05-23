@@ -100,58 +100,61 @@ export default function UrgeFlow({ personalityMd, userId }: Props) {
     setStep('conversing')
   }
 
-  async function handleConversationWin(history: HistoryEntry[], summary: string) {
+  // All three loop-close paths advance the UI immediately and save in the
+  // background. The urge row already exists; these are just status updates,
+  // and any failure is recoverable through the food-log banner flow.
+  function handleConversationWin(history: HistoryEntry[], summary: string) {
     if (!urgeId) return
-    await supabase.from('urges').update({
+    setStep('win')
+    supabase.from('urges').update({
       gave_in: false,
       held_seconds: heldSeconds,
       conversation_log: history,
       summary,
     }).eq('id', urgeId)
-    setStep('win')
+      .then(({ error }) => { if (error) console.error('save win failed', error) })
   }
 
-  async function handleConversationGiveIn(history: HistoryEntry[], summary: string) {
+  function handleConversationGiveIn(history: HistoryEntry[], summary: string) {
     if (!urgeId) return
-    await supabase.from('urges').update({
+    setStep('give_in')
+    supabase.from('urges').update({
       gave_in: true,
       held_seconds: heldSeconds,
       conversation_log: history,
       summary,
     }).eq('id', urgeId)
-    setStep('give_in')
+      .then(({ error }) => { if (error) console.error('save give_in failed', error) })
   }
 
-  async function handleConversationHold10(history: HistoryEntry[], summary: string) {
+  function handleConversationHold10(history: HistoryEntry[], summary: string) {
     if (!urgeId) return
     // Pessimistic assumption — mark as gave_in so the food log banner appears.
     // The banner has "Actually I didn't have it" to flip this retroactively.
-    await supabase.from('urges').update({
+    setStep('hold_10')
+    supabase.from('urges').update({
       gave_in: true,
       held_seconds: heldSeconds,
       conversation_log: history,
       summary,
     }).eq('id', urgeId)
-    setStep('hold_10')
+      .then(({ error }) => { if (error) console.error('save hold_10 failed', error) })
   }
 
-  async function handleWin(feeling: string) {
+  function handleWin(feeling: string) {
     if (!urgeId) return
-    setSaving(true)
+    // Show "rep done" immediately. Save + personality fold in the background.
     setWonFeeling(feeling)
-    await supabase.from('urges').update({
+    supabase.from('urges').update({
       won_feeling: feeling,
       completed_at: new Date().toISOString(),
     }).eq('id', urgeId)
-    // Urge loop is now complete — update personality.
-    // Insight is NOT regenerated here; the user refreshes it manually from
-    // their profile (max 1/day) to keep token usage bounded.
+      .then(({ error }) => { if (error) console.error('save won_feeling failed', error) })
     fetch('/api/personality', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ urgeId }),
-    })
-    setSaving(false)
+    }).catch(err => console.error('personality background update failed', err))
   }
 
   async function handleWinCustom() {

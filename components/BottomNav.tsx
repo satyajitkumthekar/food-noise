@@ -1,7 +1,8 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 
 const tabs = [
   { href: '/', label: 'Crave', icon: '◎' },
@@ -11,6 +12,17 @@ const tabs = [
 
 export default function BottomNav() {
   const pathname = usePathname()
+  const router = useRouter()
+
+  // Prefetch the other tabs on mount. Next does this automatically on desktop
+  // (viewport hover), but on mobile the tap is the first signal — by then the
+  // navigation has already started. Prefetching at mount makes tab switches
+  // feel instant.
+  useEffect(() => {
+    for (const tab of tabs) {
+      if (tab.href !== pathname) router.prefetch(tab.href)
+    }
+  }, [pathname, router])
 
   return (
     <nav
@@ -20,7 +32,7 @@ export default function BottomNav() {
       {tabs.map(tab => {
         const active = pathname === tab.href
         return (
-          <Link key={tab.href} href={tab.href} className="flex flex-col items-center gap-1 flex-1 py-1">
+          <Link key={tab.href} href={tab.href} prefetch className="flex flex-col items-center gap-1 flex-1 py-1">
             <span className="text-xl" style={{ color: active ? 'var(--accent)' : 'var(--muted)' }}>
               {tab.icon}
             </span>

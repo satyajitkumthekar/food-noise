@@ -186,11 +186,48 @@ export default function ConversationFlow({ craving, expectedFeeling, currentFeel
     }
   }, [turns])
 
+  // Derive the outcome from the user's final pick, not from Claude's emitted
+  // `outcome` field. Claude occasionally emits inconsistent values (caps,
+  // synonyms, missing field) and the previous catch-all routed those to
+  // "gave in" — costing the user a confirmed hold. The chosen text is the
+  // user's actual answer, so trust it.
+  function deriveOutcome(claudeOutcome: 'win' | 'continue_to_eat' | 'hold_10', finalChoice: string): 'win' | 'continue_to_eat' | 'hold_10' {
+    const t = finalChoice.toLowerCase()
+
+    // Explicit 10-more-minutes signal in the user's choice.
+    if (/\b(10|ten)\b/.test(t) && /(more\s*min|another|wait|extra)/.test(t)) return 'hold_10'
+    if (/\b10\s*more\b/.test(t)) return 'hold_10'
+
+    // Explicit "I'll have it" / "having it" / "eat it" / "have a little" signals.
+    if (/\b(have it|having it|eat it|eating it|have a little|consciously)\b/.test(t)) return 'continue_to_eat'
+
+    // Explicit hold / not having signals.
+    if (/\b(hold|not having|won['’]?t|won t|don['’]?t feel like|no longer|not anymore|skip it|pass)\b/.test(t)) return 'win'
+
+    // Fall back to Claude's outcome if our patterns don't match.
+    if (claudeOutcome === 'win' || claudeOutcome === 'continue_to_eat' || claudeOutcome === 'hold_10') {
+      return claudeOutcome
+    }
+
+    // Last resort: assume win. This is the safest default — a false win can be
+    // corrected via the food-log banner ("actually I had it"). A false give-in
+    // costs the user a real held rep.
+    console.warn('[ConversationFlow] Could not derive outcome, defaulting to win', { claudeOutcome, finalChoice })
+    return 'win'
+  }
+
   function handleEnd() {
     const resolve = turns.find(t => t.type === 'resolve') as ResolveTurn | undefined
     if (!resolve) return
-    if (resolve.outcome === 'win') onWin(history, resolve.summary)
-    else if (resolve.outcome === 'hold_10') onHold10(history, resolve.summary)
+
+    // Find the user's pick on the state-5 options turn.
+    const state5Options = turns.find(t => t.type === 'options' && t.state === 5) as OptionsTurn | undefined
+    const finalChoice = state5Options?.chosen ?? ''
+
+    const outcome = deriveOutcome(resolve.outcome, finalChoice)
+
+    if (outcome === 'win') onWin(history, resolve.summary)
+    else if (outcome === 'hold_10') onHold10(history, resolve.summary)
     else onGiveIn(history, resolve.summary)
   }
 

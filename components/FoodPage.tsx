@@ -60,6 +60,9 @@ export default function FoodPage({ initialLogs, pendingGiveIns, userId, kcalTarg
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [activeCheckIn, setActiveCheckIn] = useState<PendingGiveIn | null>(null)
+  // True when the sheet was opened by auto-match after a food log (so we skip
+  // asking "did you have it?"). False when opened by tapping the banner.
+  const [checkInAuto, setCheckInAuto] = useState(false)
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set())
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [kcalT, setKcalT] = useState<number | null>(kcalTarget)
@@ -113,7 +116,10 @@ export default function FoodPage({ initialLogs, pendingGiveIns, userId, kcalTarg
     }).select().single()
     if (!error && data) {
       setLogs(prev => [...prev, data as FoodLog])
-      if (matched) setActiveCheckIn(matched)
+      if (matched) {
+        setCheckInAuto(true)
+        setActiveCheckIn(matched)
+      }
     }
   }
 
@@ -185,7 +191,12 @@ export default function FoodPage({ initialLogs, pendingGiveIns, userId, kcalTarg
 
   async function handleDelete(id: string) {
     setDeletingId(id)
-    await supabase.from('food_logs').delete().eq('id', id)
+    const { error } = await supabase.from('food_logs').delete().eq('id', id)
+    if (error) {
+      console.error('food_logs delete failed', error)
+      setDeletingId(null)
+      return
+    }
     setLogs(prev => prev.filter(l => l.id !== id))
     setDeletingId(null)
   }
@@ -194,11 +205,13 @@ export default function FoodPage({ initialLogs, pendingGiveIns, userId, kcalTarg
     // Called when user completes the flow (saved) — removes from banner
     setResolvedIds(prev => new Set([...prev, id]))
     setActiveCheckIn(null)
+    setCheckInAuto(false)
   }
 
   function handleCheckInDismiss() {
     // Called when user taps Dismiss — closes sheet but banner stays
     setActiveCheckIn(null)
+    setCheckInAuto(false)
   }
 
   return (
@@ -210,7 +223,7 @@ export default function FoodPage({ initialLogs, pendingGiveIns, userId, kcalTarg
       {/* Pending loop banner — always visible until resolved, tap to open sheet */}
       {unresolvedGiveIns.length > 0 && (
         <button
-          onClick={() => setActiveCheckIn(unresolvedGiveIns[0])}
+          onClick={() => { setCheckInAuto(false); setActiveCheckIn(unresolvedGiveIns[0]) }}
           style={{ width: '100%', borderRadius: 14, padding: '14px 16px', background: 'var(--accent-dim)', border: '1px solid rgba(62,207,207,0.25)', marginBottom: 20, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
         >
           <div>
@@ -362,6 +375,7 @@ export default function FoodPage({ initialLogs, pendingGiveIns, userId, kcalTarg
       {activeCheckIn && (
         <FoodCheckIn
           giveIn={activeCheckIn}
+          autoTriggered={checkInAuto}
           onDone={() => handleCheckInResolved(activeCheckIn.id)}
           onDismiss={handleCheckInDismiss}
         />

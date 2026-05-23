@@ -10,6 +10,10 @@ type Props = {
     current_feeling: string | null
     expected_feeling: string | null
   }
+  // True when the sheet was opened automatically because the user just logged
+  // a food matching the craving. In that case we already know they had it, so
+  // we skip the "did you have it?" step.
+  autoTriggered?: boolean
   onDone: () => void
   onDismiss: () => void
 }
@@ -40,8 +44,8 @@ const chipActive: React.CSSProperties = {
   border: '1px solid rgba(62,207,207,0.4)',
 }
 
-export default function FoodCheckIn({ giveIn, onDone, onDismiss }: Props) {
-  const [step, setStep] = useState<Step>('confirm')
+export default function FoodCheckIn({ giveIn, autoTriggered = false, onDone, onDismiss }: Props) {
+  const [step, setStep] = useState<Step>(autoTriggered ? 'worth_it' : 'confirm')
   const [worthIt, setWorthIt] = useState('')
   const [afterFeeling, setAfterFeeling] = useState('')
   const [didntHaveFeeling, setDidntHaveFeeling] = useState('')
@@ -49,7 +53,10 @@ export default function FoodCheckIn({ giveIn, onDone, onDismiss }: Props) {
   const [saving, setSaving] = useState(false)
   const supabase = createClient()
 
-  // They actually DID have it — save after_feeling + worth_it
+  // They actually DID have it — save after_feeling + worth_it.
+  // The DB write is awaited so we know it succeeded before closing.
+  // The personality fold-in runs in the background — it's slow (~2-3s)
+  // and the user doesn't need to wait for it.
   async function handleSaveGaveIn() {
     if (!afterFeeling.trim()) return
     setSaving(true)
@@ -57,14 +64,13 @@ export default function FoodCheckIn({ giveIn, onDone, onDismiss }: Props) {
       worth_it: worthIt === 'Yeah, worth it',
       after_feeling: afterFeeling.trim(),
     }).eq('id', giveIn.id)
-    await fetch('/api/personality', {
+    fetch('/api/personality', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ urgeId: giveIn.id }),
-    })
-    // Insight regeneration is now manual (max 1/day) from the profile screen.
+    }).catch(err => console.error('personality background update failed', err))
     setSaving(false)
-    setStep('done')
+    onDone()
   }
 
   // They actually didn't have it — flip gave_in to false, save won_feeling
@@ -77,13 +83,13 @@ export default function FoodCheckIn({ giveIn, onDone, onDismiss }: Props) {
       won_feeling: feeling,
       held_seconds: null,
     }).eq('id', giveIn.id)
-    await fetch('/api/personality', {
+    fetch('/api/personality', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ urgeId: giveIn.id }),
-    })
+    }).catch(err => console.error('personality background update failed', err))
     setSaving(false)
-    setStep('done')
+    onDone()
   }
 
   return (
@@ -145,8 +151,16 @@ export default function FoodCheckIn({ giveIn, onDone, onDismiss }: Props) {
         {/* WORTH IT */}
         {step === 'worth_it' && (
           <>
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>Honest check</p>
-            <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg)' }}>Was it worth it?</h3>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+              {autoTriggered ? 'Closing the loop' : 'Honest check'}
+            </p>
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg)', lineHeight: 1.45 }}>
+              {autoTriggered ? (
+                <>You logged <span style={{ color: 'var(--accent-text)' }}>{giveIn.craving}</span> — the thing you were craving. Was it worth it?</>
+              ) : (
+                <>Was it worth it?</>
+              )}
+            </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {WORTH_IT_OPTIONS.map(opt => (
                 <button key={opt} onClick={() => { setWorthIt(opt); setStep('after_feeling') }}

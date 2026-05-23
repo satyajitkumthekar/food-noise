@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { requireUser } from '@/lib/supabase/cached'
 import ProfileView from '@/components/ProfileView'
 import type { GoalMode, LimitsInputs } from '@/lib/database.types'
 
@@ -14,13 +15,13 @@ type ProfileRow = {
 }
 
 export default async function ProfileRoute() {
+  const user = await requireUser()
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
 
   const { data: profileRaw } = await supabase
     .from('profiles')
     .select('name, personality_md, kcal_target, protein_target, limits_inputs, goal_mode, insight_md, insight_updated_at')
-    .eq('id', user!.id)
+    .eq('id', user.id)
     .single()
 
   const profile = profileRaw as ProfileRow | null
