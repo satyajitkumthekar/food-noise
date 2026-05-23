@@ -5,15 +5,8 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import ConversationFlow from './ConversationFlow'
 
-type Profile = {
-  goal: string | null
-  why_it_matters: string | null
-  what_changes: string | null
-  personality_md: string | null
-}
-
 type Props = {
-  profile: Profile
+  personalityMd: string
   userId: string
 }
 
@@ -50,7 +43,7 @@ function DescriptiveHint() {
   )
 }
 
-export default function UrgeFlow({ profile, userId }: Props) {
+export default function UrgeFlow({ personalityMd, userId }: Props) {
   const router = useRouter()
   const supabase = createClient()
 
@@ -150,7 +143,9 @@ export default function UrgeFlow({ profile, userId }: Props) {
       won_feeling: feeling,
       completed_at: new Date().toISOString(),
     }).eq('id', urgeId)
-    // Urge loop is now complete — update personality
+    // Urge loop is now complete — update personality.
+    // Insight is NOT regenerated here; the user refreshes it manually from
+    // their profile (max 1/day) to keep token usage bounded.
     fetch('/api/personality', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

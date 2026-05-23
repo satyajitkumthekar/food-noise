@@ -42,27 +42,48 @@ export type Database = {
         Row: {
           created_at: string | null
           goal: string | null
+          goal_mode: GoalMode | null
           id: string
+          insight_md: string | null
+          insight_updated_at: string | null
+          kcal_target: number | null
+          limits_inputs: LimitsInputs | null
           name: string | null
           personality_md: string | null
+          protein_target: number | null
+          weight_kg: number | null
           what_changes: string | null
           why_it_matters: string | null
         }
         Insert: {
           created_at?: string | null
           goal?: string | null
+          goal_mode?: GoalMode | null
           id: string
+          insight_md?: string | null
+          insight_updated_at?: string | null
+          kcal_target?: number | null
+          limits_inputs?: LimitsInputs | null
           name?: string | null
           personality_md?: string | null
+          protein_target?: number | null
+          weight_kg?: number | null
           what_changes?: string | null
           why_it_matters?: string | null
         }
         Update: {
           created_at?: string | null
           goal?: string | null
+          goal_mode?: GoalMode | null
           id?: string
+          insight_md?: string | null
+          insight_updated_at?: string | null
+          kcal_target?: number | null
+          limits_inputs?: LimitsInputs | null
           name?: string | null
           personality_md?: string | null
+          protein_target?: number | null
+          weight_kg?: number | null
           what_changes?: string | null
           why_it_matters?: string | null
         }
@@ -122,6 +143,19 @@ export type Database = {
       }
     }
   }
+}
+
+export type ActivityLevel = 'sitting' | 'moderate' | 'very'
+
+export type GoalMode = 'craving_control' | 'lose_weight'
+
+export type LimitsInputs = {
+  gender: 'male' | 'female'
+  age: number
+  height_cm: number
+  weight_kg: number
+  activity: ActivityLevel
+  goal_mode: GoalMode
 }
 
 export type Profile = Database['public']['Tables']['profiles']['Row']

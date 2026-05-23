@@ -23,7 +23,7 @@ export default function UrgeHome({ held, total }: { held: number; total: number 
         >
           <p className="text-xs font-semibold tracking-widest uppercase mb-1" style={{ color: 'var(--muted)' }}>Your record</p>
           <p className="text-sm" style={{ color: 'var(--fg2)' }}>
-            Beaten <span style={{ color: 'var(--accent-text)', fontWeight: 600 }}>{held}</span> of your last <span style={{ color: 'var(--accent-text)', fontWeight: 600 }}>{total}</span> urges
+            Held through <span style={{ color: 'var(--accent-text)', fontWeight: 600 }}>{held}</span> of your last <span style={{ color: 'var(--accent-text)', fontWeight: 600 }}>{total}</span> cravings
           </p>
         </div>
       )}
@@ -48,7 +48,7 @@ export default function UrgeHome({ held, total }: { held: number; total: number 
           }}
         >
           <span style={{ color: 'var(--accent)', fontSize: 28 }}>◎</span>
-          <span>I have an urge</span>
+          <span>I have a craving</span>
         </button>
       </div>
 

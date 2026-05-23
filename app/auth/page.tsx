@@ -34,7 +34,7 @@ export default function AuthPage() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
           <div className="text-4xl mb-4" style={{ color: 'var(--accent)' }}>◎</div>
-          <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>Urge</h1>
+          <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>Crave</h1>
           <p className="mt-2 text-xs tracking-widest uppercase font-medium" style={{ color: 'var(--muted)' }}>Your accountability mirror</p>
         </div>
 

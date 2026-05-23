@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 type MessageParam = { role: 'user' | 'assistant'; content: string }
@@ -42,6 +41,9 @@ function Typewriter({ text, speed = 18, onDone }: { text: string; speed?: number
 
 type Props = { name: string; userId: string }
 
+// Max questions before we force Claude to wrap up. 7 for prod, 1 for fast testing.
+const MAX_QUESTIONS = 7
+
 export default function OnboardingChat({ name, userId }: Props) {
   const [currentQuestion, setCurrentQuestion] = useState('')
   const [typingDone, setTypingDone] = useState(false)
@@ -53,7 +55,6 @@ export default function OnboardingChat({ name, userId }: Props) {
   const claudeMessagesRef = useRef<MessageParam[]>([])
   const rawAssistantRef = useRef('')
   const router = useRouter()
-  const supabase = createClient()
 
   async function fetchNextQuestion(messages: MessageParam[]) {
     setLoading(true)
@@ -125,18 +126,19 @@ export default function OnboardingChat({ name, userId }: Props) {
 
   async function saveAndFinish(personalityMd: string) {
     setSaving(true)
-    const { error } = await supabase.from('profiles').upsert({
-      id: userId,
-      name,
-      personality_md: personalityMd,
+    const res = await fetch('/api/save-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, personality_md: personalityMd }),
     })
-    if (error) {
-      console.error('profile save error', error)
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      console.error('profile save error', body)
       setError('Could not save your profile. Please try again.')
       setSaving(false)
       return
     }
-    router.push('/')
+    window.location.href = '/'
   }
 
   useEffect(() => {
@@ -155,7 +157,16 @@ export default function OnboardingChat({ name, userId }: Props) {
     setCurrentQuestion('')
 
     const userTurn: MessageParam = { role: 'user', content: answer }
-    const newMessages = [...claudeMessagesRef.current, userTurn]
+    let newMessages = [...claudeMessagesRef.current, userTurn]
+
+    // After MAX_QUESTIONS, force Claude to wrap up — no more questions
+    if (questionCount >= MAX_QUESTIONS) {
+      newMessages = [...newMessages, {
+        role: 'user',
+        content: 'That is enough. You have all you need. Output the done line now with the full profile. Do not ask another question.',
+      }]
+    }
+
     claudeMessagesRef.current = newMessages
     fetchNextQuestion(newMessages)
   }
@@ -174,7 +185,7 @@ export default function OnboardingChat({ name, userId }: Props) {
       {/* Progress */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 40 }}>
         <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: 'var(--muted)' }}>
-          {questionCount > 0 ? `${questionCount} of 7` : ''}
+          {questionCount > 0 ? `${Math.min(questionCount, MAX_QUESTIONS)} of ${MAX_QUESTIONS}` : ''}
         </span>
       </div>
 

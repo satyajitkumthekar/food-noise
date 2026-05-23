@@ -30,16 +30,11 @@ export async function POST(req: Request) {
 
     const { data: profileRaw } = await serviceClient
       .from('profiles')
-      .select('goal, why_it_matters, what_changes, personality_md')
+      .select('personality_md')
       .eq('id', user.id)
       .single()
 
-    const profile = profileRaw as {
-      goal: string | null
-      why_it_matters: string | null
-      what_changes: string | null
-      personality_md: string | null
-    } | null
+    const profile = profileRaw as { personality_md: string | null } | null
 
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     const { data: rawUrges } = await serviceClient
@@ -67,8 +62,7 @@ export async function POST(req: Request) {
       if (u.gave_in === false) streak++; else break
     }
 
-    const profileText = profile?.personality_md
-      || `Goal: ${profile?.goal}. Why it matters: ${profile?.why_it_matters}. What changes: ${profile?.what_changes}`
+    const profileText = profile?.personality_md || 'No profile yet.'
 
     // Build a rich urge history block for Claude
     const completedUrges = urges.filter(u => u.gave_in !== null)
@@ -87,7 +81,7 @@ export async function POST(req: Request) {
       urges.some(u => u.summary) && `Recent session notes: ${urges.filter(u => u.summary).map(u => u.summary).slice(0, 3).join(' | ')}`,
     ].filter(Boolean).join('\n')
 
-    systemPrompt = `You are a quiet, straight-talking presence inside an app called Urge. You are not a wellness guide. You are not a coach. You are the part of this person that already knows what is going on — the part that made them stop, pick up the phone, and look at what is actually happening before they ate.
+    systemPrompt = `You are a quiet, straight-talking presence inside an app called Crave. You are not a wellness guide. You are not a coach. You are the part of this person that already knows what is going on — the part that made them stop, pick up the phone, and look at what is actually happening before they ate.
 
 Your only job is to slow things down enough for a real choice to happen. Not to stop them eating. Not to lecture. Not to make them feel bad. Just to stay with them for two minutes and help them see clearly what they are actually doing and why.
 

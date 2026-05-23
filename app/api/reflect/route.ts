@@ -19,16 +19,11 @@ export async function POST(req: Request) {
 
   const { data: profileRaw } = await serviceClient
     .from('profiles')
-    .select('goal, why_it_matters, what_changes, personality_md')
+    .select('personality_md')
     .eq('id', user.id)
     .single()
 
-  const profile = profileRaw as {
-    goal: string | null
-    why_it_matters: string | null
-    what_changes: string | null
-    personality_md: string | null
-  } | null
+  const profile = profileRaw as { personality_md: string | null } | null
 
   const now = new Date()
   const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
@@ -55,8 +50,7 @@ export async function POST(req: Request) {
     if (u.gave_in === false) streak++; else break
   }
 
-  const profileText = profile?.personality_md
-    || `Goal: ${profile?.goal}\nWhy: ${profile?.why_it_matters}\nWhat changes: ${profile?.what_changes}`
+  const profileText = profile?.personality_md || ''
 
   // System prompt — shared across both phases
   const systemPrompt = `You are a calm, continuous voice in a conversation with someone who is sitting with a food craving right now. You know their history, their goals, and everything you have said to them in this conversation already. You speak in second person. No bullet points. No headers. Flowing prose. Do NOT use the word "urge". Do NOT repeat yourself — if you already said something encouraging in this conversation, build on it rather than restating it.
@@ -125,7 +119,7 @@ ${regretContext ? `\n${regretContext}` : ''}`
   }
 
   const stream = await anthropic.messages.stream({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-opus-4-7',
     max_tokens: phase === 1 ? 300 : 200,
     system: systemPrompt,
     messages,

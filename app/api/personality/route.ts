@@ -8,9 +8,6 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
 type ProfileRow = {
   personality_md: string | null
-  goal: string | null
-  why_it_matters: string | null
-  what_changes: string | null
   name: string | null
 }
 
@@ -24,7 +21,7 @@ export async function POST(req: Request) {
 
   const { data: profileRaw } = await serviceClient
     .from('profiles')
-    .select('personality_md, goal, why_it_matters, what_changes, name')
+    .select('personality_md, name')
     .eq('id', user.id)
     .single()
 
@@ -32,13 +29,7 @@ export async function POST(req: Request) {
 
   let eventDescription = ''
 
-  if (body.seed) {
-    eventDescription = `New user onboarding:
-Name: ${body.name}
-Goal: ${body.goal}
-Why it matters: ${body.why_it_matters}
-What changes: ${body.what_changes}`
-  } else if (body.urgeId) {
+  if (body.urgeId) {
     const { data: urgeRaw } = await serviceClient
       .from('urges')
       .select('*')
@@ -73,20 +64,35 @@ ${voiceTranscript ? `Inner voice transcript (what they said their voice was tell
   const currentProfile = profile?.personality_md || ''
 
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 800,
-    system: `You maintain a living psychological profile for one person using a binge-eating accountability app. You receive their current profile and one new event. Rewrite the profile to fold in the new event — keep it short, plain, and specific to this person.
+    model: 'claude-opus-4-7',
+    max_tokens: 2400,
+    system: `You maintain a living psychological profile for one person using a binge-eating accountability app. You receive their CURRENT profile and ONE new event. You return the updated profile.
 
-Track and update:
-- Their stated goal and why it matters to them (in their words)
-- Their recurring cravings and what feelings trigger each one
-- The gap: what they hoped food would give them vs what it actually delivered (their own words)
-- Their inner voice patterns — the specific phrases and rationalizations that come up (from conversation_log)
-- What helped them hold — specific feelings, strategies, or moments that worked
-- Their characteristic phrasing and emotional vocabulary
-- Patterns over time: are they improving, regressing, stuck on a specific craving?
+═══════════════════════════════════
+HOW TO UPDATE
+═══════════════════════════════════
+The current profile was written carefully — probably during onboarding, in rich, structured form with the person's exact words. Your job is to EXTEND it with what the new event reveals, not to summarise it. Never shorten a section that is already detailed unless the new event directly contradicts what was there. Length is not the enemy — vagueness is.
 
-Do not add advice. Do not invent facts. Only reflect what the data shows. Be specific — generic observations are useless. Return only the updated markdown profile.`,
+Preserve the existing structure (the markdown headings). If the profile already has sections like Goal / Why It Matters / What Changes / Relationship With Food / What They Have Tried / How Failure Feels / How Winning Will Feel / The Moment Before They Reach For Food / Their Words — keep all of them. Add new sections only if the new event surfaces something the existing structure cannot hold.
+
+═══════════════════════════════════
+WHAT TO FOLD IN FROM THE NEW EVENT
+═══════════════════════════════════
+- New cravings or triggers that appeared, and the specific feeling that drove them.
+- The gap between what they hoped food would give them and what it actually delivered — in their own words from the after_feeling field.
+- Inner voice patterns from the conversation_log — the exact phrases and rationalisations that came up in their head this time. Add these to the "Their Words" section verbatim where possible.
+- What helped them hold, if they held. Specific feelings, moments, or shifts that worked. Add to a "What Has Worked" section if one does not exist.
+- Whether the pattern is shifting — are they holding more, naming feelings more clearly, catching themselves earlier? Note it factually, not as praise.
+- If they gave in and said it was not worth it: capture that mismatch plainly. This is gold for the mirror agent next time.
+
+═══════════════════════════════════
+RULES
+═══════════════════════════════════
+- Use their exact words wherever possible. Quote them. Generic observations are worthless.
+- Do not add advice. Do not invent facts. Do not interpret beyond what the data shows.
+- Never collapse rich detail into a summary. If a section was three paragraphs of specific quotes before, it should still be three paragraphs (plus whatever the new event adds).
+- If the new event is small or repeats a known pattern, the update may be tiny — one new quote in "Their Words", one line noting the repetition. That is fine.
+- Return ONLY the updated markdown profile. No preamble, no commentary, no code fences. Start with the first heading.`,
     messages: [
       {
         role: 'user',

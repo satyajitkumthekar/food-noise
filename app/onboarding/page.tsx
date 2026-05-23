@@ -32,7 +32,7 @@ export default function OnboardingPage() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
           <div style={{ fontSize: 32, color: 'var(--accent)', marginBottom: 12 }}>◎</div>
-          <h1 style={{ fontSize: 28, fontWeight: 700, color: 'var(--fg)', margin: 0 }}>Urge</h1>
+          <h1 style={{ fontSize: 28, fontWeight: 700, color: 'var(--fg)', margin: 0 }}>Crave</h1>
           <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 8, letterSpacing: '0.05em' }}>Your accountability mirror</p>
         </div>
 

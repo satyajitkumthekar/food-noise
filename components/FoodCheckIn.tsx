@@ -62,6 +62,7 @@ export default function FoodCheckIn({ giveIn, onDone, onDismiss }: Props) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ urgeId: giveIn.id }),
     })
+    // Insight regeneration is now manual (max 1/day) from the profile screen.
     setSaving(false)
     setStep('done')
   }

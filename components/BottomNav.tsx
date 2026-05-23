@@ -4,9 +4,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const tabs = [
-  { href: '/record', label: 'Record', icon: '▦' },
-  { href: '/', label: 'Urge', icon: '◎' },
+  { href: '/', label: 'Crave', icon: '◎' },
   { href: '/food', label: 'Food', icon: '⊞' },
+  { href: '/profile', label: 'You', icon: '◐' },
 ]
 
 export default function BottomNav() {
